@@ -2,23 +2,24 @@ import os
 import csv
 from os import walk
 from bs4 import BeautifulSoup
+import re
 
 print("Iniciando processamento de notas fiscais.")
 
-f = []
+files = []
 for (dirpath, dirnames, filenames) in walk(os.getcwd()):
-    f.extend(filenames)
+    files.extend(filenames)
     break
 
 rows = ['produto', 'ncm', 'unidade', 'quantidade', 'valorUnidade',
         'valorProduto', 'destCNPJ/destCPF', 'comprador', 'dataEmissao']
 dataList = [rows]
 
-for xml in f:
+for xml in files:
     if("xml" in xml):
-        with open(xml, 'r') as f:
+        with open(xml, 'r', encoding="UTF-8", errors="ignore") as file:
             print("Processando", xml)
-            data = f.read()
+            data = file.read()
             soup = BeautifulSoup(data, 'lxml')
             products = soup.find_all('prod')
             def check_cnpj(self):
@@ -32,19 +33,19 @@ for xml in f:
                     dataList.append([product.find('xprod').getText(),
                                  product.find('ncm').getText(),
                                  product.find('ucom').getText(),
-                                 product.find('qcom').getText(),
-                                 product.find('vuncom').getText(),
-                                 product.find('vprod').getText(),
+                                 re.sub(r'\.', ',',product.find('qcom').getText()),
+                                 re.sub(r'\.', ',',product.find('vuncom').getText()),
+                                 re.sub(r'\.', ',', product.find('vprod').getText()),
                                  soup.find('dest').find(check_cnpj).getText(),
                                  soup.find('dest').find('xnome').getText(),
                                  soup.find('dhemi').getText()])
-                    with open('vendas.csv', 'w') as f:
-                        write = csv.writer(f)
-                        
-                        write.writerows(dataList)
                 except Exception as e:
                     print({xml},repr(e))
                 except:
                     pass
+
+with open('vendas.csv', 'w', newline='') as csvFile:
+    write = csv.writer(csvFile, delimiter=";")
+    write.writerows(dataList)
 
 print("Processamento finalizado com sucesso")
